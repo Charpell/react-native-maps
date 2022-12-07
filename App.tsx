@@ -1,5 +1,7 @@
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
 import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
+import { GooglePlacesAutocomplete, GooglePlacesAutocompleteProps } from 'react-native-google-places-autocomplete';
+import { API_KEY } from './credentials';
 
 
 const { width, height } = Dimensions.get('window');
@@ -22,6 +24,19 @@ export default function App() {
        provider={PROVIDER_GOOGLE} 
        initialRegion={INITIAL_POSITION}
       />
+      <View style={styles.searchContainer}>
+        <GooglePlacesAutocomplete 
+        styles={{ textInput: styles.input }}
+        placeholder='Search'
+        onPress={(data, details = null) => {
+          
+          }}
+        query={{
+          key: API_KEY,
+          language: 'en',
+        }}
+      />
+      </View>
     </View>
   );
 }
@@ -31,7 +46,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   map: {
-    width: '100%',
-    height: '100%',
+    width: Dimensions.get('window').width,
+    height: Dimensions.get('window').height,
   },
+  searchContainer: {
+    position: 'absolute',
+    width: '90%',
+    backgroundColor: 'white',
+    shadowColor: 'black',
+    shadowOffset: {
+      width: 2,
+      height: 2
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 4,
+    elevation: 4,
+    padding: 8,
+    borderRadius: 8,
+  },
+  input: {
+    borderColor: '#888',
+    borderWidth: 1,
+  }
 });
