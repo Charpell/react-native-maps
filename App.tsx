@@ -1,9 +1,11 @@
-import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import MapView, { LatLng, PROVIDER_GOOGLE } from 'react-native-maps';
+import { Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import MapView, { LatLng, Marker, PROVIDER_GOOGLE } from 'react-native-maps';
 import Constants from 'expo-constants'
 import { AutoComplete } from './AutoComplete';
 import { GooglePlaceDetail } from 'react-native-google-places-autocomplete';
 import { useState, useRef } from 'react';
+import { API_KEY } from './credentials';
+import MapViewDirections from 'react-native-maps-directions';
 
 
 const { width, height } = Dimensions.get('window');
@@ -22,6 +24,9 @@ export default function App() {
   const [origin, setOrigin] = useState<GooglePlaceDetail | null>();
   const [destination, setDestination] = useState<GooglePlaceDetail | null>();
   const mapRef = useRef<MapView>(null);
+  const [showDirection, setShowDirection] = useState(false)
+  const [distance, setDistance] = useState(0)
+  const [duration, setDuration] = useState(0);
 
   const moveTo = async (position: LatLng) => {
     const camera = await mapRef.current?.getCamera();
@@ -41,6 +46,29 @@ export default function App() {
     moveTo(position)
   };
 
+  const edgePaddingValue = 70;
+
+  const edgePadding = {
+    top: edgePaddingValue,
+    right: edgePaddingValue,
+    bottom: edgePaddingValue,
+    left: edgePaddingValue,
+  }
+
+  const traceRouteOnReady = (args: any) => {
+    if (args) {
+      setDistance(args.distance)
+      setDuration(args.duration)
+    }
+  }
+
+  const traceRoute = () => {
+    if (origin && destination) {
+      setShowDirection(true)
+      mapRef.current?.fitToCoordinates([origin, destination], { edgePadding }
+    )}
+  }
+
   return (
     <View style={styles.container}>
       <MapView
@@ -48,7 +76,20 @@ export default function App() {
        style={styles.map}  
        provider={PROVIDER_GOOGLE} 
        initialRegion={INITIAL_POSITION}
-      />
+      >
+        {origin && <Marker coordinate={origin} />}
+        {destination && <Marker coordinate={destination} />}
+        {showDirection && origin && destination &&
+         <MapViewDirections
+            origin={origin}
+            destination={destination}
+            apikey={API_KEY}
+            strokeColor="#6644ff"
+            strokeWidth={4}
+            onReady={traceRouteOnReady}
+          />
+      }
+      </MapView>
       <View style={styles.searchContainer}>
        <AutoComplete label='Origin' onPlaceSelected={(details) => {
           onPlaceSelected(details, 'origin')
@@ -56,6 +97,17 @@ export default function App() {
        <AutoComplete label='Destination' onPlaceSelected={(details) => {
           onPlaceSelected(details, 'destination')
        }}/>
+       <TouchableOpacity style={styles.button} onPress={traceRoute}>
+          <Text style={styles.buttonText}>Trace route</Text>
+       </TouchableOpacity>
+       {
+        distance && duration ? (
+          <View>
+          <Text>Distance: {distance.toFixed(2)} km</Text>
+          <Text>Duration: {Math.ceil(duration)} min</Text>
+       </View>
+        ) : null
+       }
       </View>
     </View>
   );
@@ -84,5 +136,14 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 8,
     top: Constants.statusBarHeight + 10,
+  },
+  button: {
+    backgroundColor: "#bbb",
+    paddingVertical: 12,
+    marginTop: 16,
+    borderRadius: 4,
+  },
+  buttonText: {
+    textAlign: "center",
   }
 });
