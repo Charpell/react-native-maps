@@ -1,7 +1,9 @@
 import { Dimensions, StyleSheet, Text, View } from 'react-native';
-import MapView, { PROVIDER_GOOGLE } from 'react-native-maps';
-import { GooglePlacesAutocomplete, GooglePlacesAutocompleteProps } from 'react-native-google-places-autocomplete';
-import { API_KEY } from './credentials';
+import MapView, { LatLng, PROVIDER_GOOGLE } from 'react-native-maps';
+import Constants from 'expo-constants'
+import { AutoComplete } from './AutoComplete';
+import { GooglePlaceDetail } from 'react-native-google-places-autocomplete';
+import { useState, useRef } from 'react';
 
 
 const { width, height } = Dimensions.get('window');
@@ -17,25 +19,43 @@ const INITIAL_POSITION = {
 }
 
 export default function App() {
+  const [origin, setOrigin] = useState<GooglePlaceDetail | null>();
+  const [destination, setDestination] = useState<GooglePlaceDetail | null>();
+  const mapRef = useRef<MapView>(null);
+
+  const moveTo = async (position: LatLng) => {
+    const camera = await mapRef.current?.getCamera();
+    if (camera) {
+      camera.center = position;
+      mapRef.current?.animateCamera(camera, { duration: 1000 });
+    }
+  }
+
+  const onPlaceSelected = (details: GooglePlaceDetail | null, flag: 'origin' | 'destination') => {
+    const set = flag === 'origin' ? setOrigin : setDestination;
+    const position = {
+      latitude: details?.geometry.location.lat || 0,
+      longitude: details?.geometry.location.lng || 0,
+    }
+    set(position)
+    moveTo(position)
+  };
+
   return (
     <View style={styles.container}>
       <MapView
+        ref={mapRef}
        style={styles.map}  
        provider={PROVIDER_GOOGLE} 
        initialRegion={INITIAL_POSITION}
       />
       <View style={styles.searchContainer}>
-        <GooglePlacesAutocomplete 
-        styles={{ textInput: styles.input }}
-        placeholder='Search'
-        onPress={(data, details = null) => {
-          
-          }}
-        query={{
-          key: API_KEY,
-          language: 'en',
-        }}
-      />
+       <AutoComplete label='Origin' onPlaceSelected={(details) => {
+          onPlaceSelected(details, 'origin')
+       }}/>
+       <AutoComplete label='Destination' onPlaceSelected={(details) => {
+          onPlaceSelected(details, 'destination')
+       }}/>
       </View>
     </View>
   );
@@ -63,9 +83,6 @@ const styles = StyleSheet.create({
     elevation: 4,
     padding: 8,
     borderRadius: 8,
-  },
-  input: {
-    borderColor: '#888',
-    borderWidth: 1,
+    top: Constants.statusBarHeight + 10,
   }
 });
